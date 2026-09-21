@@ -26,3 +26,17 @@ Numbered sections, comments that explain why (not what).
 - Each script (except `00_download_data.R`, which writes `data/raw/`) reads from
 `data/raw/` or `data/clean/` and writes to `data/clean/` or `output/`. No script writes
 anywhere else.
+
+- Every script ends with `stopifnot()` checks (unique keys, expected ranges, no missing
+values silently turned into 0).
+- Style: tidyverse, `|>` pipe, `snake_case` names. Model scripts to imitate:
+`code/01_clean_vdem.R`, `code/02_clean_wdi.R`.
+- Read CSVs with `na = ""`. Never drop or recode rows silently: print what you drop
+(for example unmatched country codes).
+**Analysis and paper**
+- The confirmatory analysis is exactly the model in `pap/pre_analysis_plan.md`. Do not
+add specifications, controls or subsamples. Anything else is exploratory and goes under
+"Exploratory analyses" in the paper.
+- Every number in the paper is inline R code (`` `r ...` ``) computed from saved
+results, never typed by hand.
+
