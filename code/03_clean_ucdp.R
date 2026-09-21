@@ -9,33 +9,55 @@
 # Date:    2026-09-18
 # ------------------------------------------------------------------
 
-# SKELETON: complete the TODOs below, in the style of 01_clean_vdem.R
-# (numbered sections, here() paths, comments that say WHY).
-
-message("03_clean_ucdp.R: TODOs not completed yet")  # TODO 6 removes this line
-
 # 1. Setup ------------------------------------------------------------
-# TODO 1: load tidyverse and here; read data/raw/ucdp_acd.csv
-#         (one row per conflict-year; check the columns you need).
+library(tidyverse)
+library(here)
+
+# UCDP/PRIO ACD rows are already conflict-years with >= 25 battle-related
+# deaths (that threshold is the dataset's own inclusion rule), so no extra
+# death filter is needed here to match the PAP's IV definition.
+ucdp_raw <- read_csv(here("data", "raw", "ucdp_acd.csv"), na = "",
+                     show_col_types = FALSE)
 
 # 2. One row per country --------------------------------------------
-# TODO 2: `gwno_loc` (Gleditsch-Ward country codes of the conflict's location)
-#         can hold several countries, separated by ", ". Split it so that
-#         each row is one conflict-year-country. Trim white space and make
-#         the codes numeric.
+# `gwno_loc` can list several Gleditsch-Ward codes separated by ", " when a
+# conflict is located in more than one country; split so each row is one
+# conflict-year-country, since that's the unit we collapse to next.
+ucdp_long <- ucdp_raw |>
+  select(conflict_id, year, intensity_level, gwno_loc) |>
+  separate_longer_delim(gwno_loc, delim = ",") |>
+  mutate(gwno_loc = as.numeric(str_trim(gwno_loc)))
+
+n_bad_gwno <- sum(is.na(ucdp_long$gwno_loc))
+if (n_bad_gwno > 0) {
+  message("03_clean_ucdp.R: dropping ", n_bad_gwno,
+          " conflict-year-country rows with unparseable gwno_loc")
+}
+ucdp_long <- ucdp_long |> filter(!is.na(gwno_loc))
 
 # 3. Collapse to country-year ---------------------------------------
-# TODO 3: collapse to one row per country (gwno_loc) and year with
-#         `conflict` = 1, `n_conflicts` = number of distinct conflict_id,
-#         `max_intensity` = highest intensity_level (1 = minor, 2 = war).
+ucdp <- ucdp_long |>
+  group_by(gwno_loc, year) |>
+  summarise(
+    conflict      = 1L,
+    n_conflicts   = n_distinct(conflict_id),
+    max_intensity = max(intensity_level),
+    .groups = "drop"
+  )
 
 # 4. Save -------------------------------------------------------------
-# TODO 4: save the result to data/clean/ucdp.rds and print how many
-#         country-years and countries it has.
+saveRDS(ucdp, here("data", "clean", "ucdp.rds"))
+message("03_clean_ucdp.R: ", nrow(ucdp), " country-years, ",
+        n_distinct(ucdp$gwno_loc), " countries, ",
+        min(ucdp$year), "-", max(ucdp$year))
 
 # 5. Checks -----------------------------------------------------------
-# TODO 5: end with a `# Checks` block of stopifnot() (unique country-year
-#         key, no NA in `gwno_loc`/`year`, `conflict` is always 1, years
-#         within 1946-2025).
-
-# Checks
+stopifnot(
+  !anyDuplicated(ucdp[c("gwno_loc", "year")]),        # unique key
+  all(!is.na(ucdp$gwno_loc)),
+  all(!is.na(ucdp$year)),
+  all(ucdp$conflict == 1),
+  all(ucdp$year >= 1946 & ucdp$year <= 2025),
+  all(ucdp$n_conflicts >= 1),
+  all(ucdp$max_intensity %in% c(1, 2))
+)
