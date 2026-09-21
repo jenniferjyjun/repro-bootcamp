@@ -11,4 +11,18 @@ Language: R (tidyverse). Paper: paper/paper.Rmd (RMarkdown). Verify with: Rscrip
 6. Do not install packages, access the network, read credentials, or touch files outside the repo without explicit permission.
 
 ## Project conventions
-<!-- In class we'll add our file-management conventions here. -->
+**Folders**
+- `data/raw/` holds raw data exactly as downloaded (read-only, git-ignored, created by
+`code/00_download_data.R`). `data/clean/` holds cleaned data written by the scripts
+(git-ignored). `output/tables/` and `output/figures/` hold results. `pap/` holds the
+pre-analysis plan. `paper/` holds `paper.Rmd`.
+- Scripts live in `code/`, are numbered (`00_`, `01_`, ...) and run in that order.
+`code/extra/` is never run by `run_all.R`.
+- `Rscript run_all.R` reproduces everything from `data/raw/` to `paper/paper.html`. It
+is the only verification command; do not add other entry points.
+**Scripts**
+- Every script starts with a header block: purpose, inputs, outputs, author, date.
+Numbered sections, comments that explain why (not what).
+- Each script (except `00_download_data.R`, which writes `data/raw/`) reads from
+`data/raw/` or `data/clean/` and writes to `data/clean/` or `output/`. No script writes
+anywhere else.
